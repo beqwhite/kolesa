@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Минималистичный Календарь</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+    <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+</head>
+
+<body>
+
+    <header class="header">
+        <button id="leftBtn" class="corner-btn">☰</button>
+        <button id="rightBtn" class="corner-btn">⚙️</button>
+    </header>
+
+    <!-- Индикатор оставшихся дней -->
+    <div id="daysLeft" class="days-left"></div>
+
+    <!-- Левое меню -->
+    <div id="leftMenu" class="left-menu hidden">
+        <button id="resetMarksBtn">Сбросить все отметки</button>
+        <button id="resetCourseBtn">Сбросить весь курс</button>
+    </div>
+
+    <!-- Правое меню -->
+    <div id="rightMenu" class="right-menu hidden">
+        <div class="settings-block horizontal">
+            <div class="horizontal-item">
+                <label>Дней приёма:
+                    <input type="number" id="daysOn" value="21" min="1">
+                </label>
+            </div>
+            <div class="horizontal-item">
+                <label>Перерыв:
+                    <input type="number" id="daysOff" value="7" min="0">
+                </label>
+            </div>
+        </div>
+        <div class="settings-block">
+            <label>Дата начала:
+                <input type="date" id="startDate">
+            </label>
+            <label>Время напоминания:
+                <input type="time" id="notifyTime" value="00:00">
+            </label>
+            <button id="enableNotifications">Включить напоминания</button>
+        </div>
+    </div>
+
+    <main id="mainContent">
+        <section class="calendar-container">
+            <div class="calendar-controls">
+                <button id="prevMonth" class="nav-btn">‹</button>
+                <button id="todayBtn">Сегодня</button>
+                <button id="nextMonth" class="nav-btn">›</button>
+            </div>
+            <h2 id="monthTitleTop" class="month-title"></h2>
+            <div class="calendar" id="calendarTop"></div>
+            <h2 id="monthTitleBottom" class="month-title"></h2>
+            <div class="calendar" id="calendarBottom"></div>
+        </section>
+    </main>
+
+</body>
+
+</html>

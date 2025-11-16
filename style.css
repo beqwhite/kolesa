@@ -1,0 +1,195 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #0d0d0f;
+  color: #fff;
+  margin: 0;
+  padding: 8px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 3px;
+}
+
+.corner-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.days-left {
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  margin: 8px 0;
+}
+
+/* Контейнер */
+main {
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+/* Скрытые блоки */
+.hidden {
+  display: none;
+}
+
+/* Настройки */
+.settings-block {
+  background: #1a1b1e;
+  border-radius: 8px;
+  padding: 6px;
+  margin-bottom: 6px;
+}
+
+label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+input[type='number'],
+input[type='time'],
+input[type='date'] {
+  width: 100%;
+  background: #2a2b2f;
+  border: 1px solid #3d3e43;
+  padding: 4px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+}
+
+button {
+  font-weight: 600;
+  padding: 6px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+
+/* Горизонтальная компоновка для дней приёма и перерыва */
+.horizontal {
+  display: flex;
+  justify-content: space-between;
+}
+.horizontal-item {
+  width: 48%;
+}
+
+/* Календарь */
+.calendar-container .calendar-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+#todayBtn {
+  background: #4cd964;
+  border: none;
+  color: #0d0d0f;
+  border-radius: 6px;
+  font-weight: 600;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.month-title {
+  text-align: center;
+  margin: 8px 0;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  max-width: 320px;
+  margin: 0 auto 16px;
+}
+
+.day {
+  background: none;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  user-select: none;
+  padding: 0;
+}
+
+.day:hover {
+  transform: scale(1.05);
+}
+
+.day.take-day {
+  background: rgba(76, 217, 100, 0.3);
+}
+.day.break-day {
+  background: rgba(255, 50, 50, 0.25);
+}
+.day.active {
+  background: #4cd964;
+  color: #0d0d0f;
+  font-weight: 600;
+}
+.day.break-marked {
+  background: rgba(255, 50, 50, 0.8);
+  color: #fff;
+  font-weight: 600;
+}
+.day.today {
+  border: 1px solid #fff;
+}
+.day.inactive {
+  opacity: 0.2;
+  pointer-events: none;
+}
+
+/* Меню */
+.left-menu,
+.right-menu {
+  position: fixed;
+  top: 50px;
+  left: 10px;
+  background: #1a1b1e;
+  border-radius: 10px;
+  padding: 10px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+.right-menu {
+  left: auto;
+  right: 10px;
+}
+.left-menu button,
+.right-menu button {
+  display: block;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.inactive {
+  pointer-events: none;
+  opacity: 0.2;
+}
