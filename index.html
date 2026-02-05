@@ -5,52 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Минималистичный Календарь</title>
+    <link rel="apple-touch-startup-image" href="splash.png">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="style.css">
     <script src="script.js" defer></script>
     <link rel="apple-touch-icon" href="icon.png">
+    <meta name="apple-mobile-web-app-title" content="Приём">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-
 </head>
 
 <body>
+    <div id="overlay" class="overlay"></div>
 
     <header class="header">
         <button id="leftBtn" class="corner-btn">☰</button>
+        <div id="daysLeft" class="days-left"></div>
         <button id="rightBtn" class="corner-btn">⚙️</button>
     </header>
 
-    <!-- Индикатор оставшихся дней -->
-    <div id="daysLeft" class="days-left"></div>
-
-    <!-- Левое меню -->
-    <div id="leftMenu" class="left-menu hidden">
-        <button id="resetMarksBtn">Сбросить все отметки</button>
-        <button id="resetCourseBtn">Сбросить весь курс</button>
+    <div id="leftMenu" class="left-menu">
+        <button id="resetMarksBtn">Сбросить отметки</button>
+        <button id="resetCourseBtn">Сбросить курс</button>
+        <hr style="border: 0.5px solid #3a3a3c; margin: 20px 0;">
+        <button id="exportBtn" style="background: #2c2c2e; color: #fff;">Скопировать бекап</button>
+        <button id="importBtn" style="background: #2c2c2e; color: #fff; margin-top: 10px;">Восстановить из
+            бекапа</button>
     </div>
 
-    <!-- Правое меню -->
-    <div id="rightMenu" class="right-menu hidden">
-        <div class="settings-block horizontal">
-            <div class="horizontal-item">
-                <label>Дней приёма:
-                    <input type="number" id="daysOn" value="21" min="1">
-                </label>
-            </div>
-            <div class="horizontal-item">
-                <label>Перерыв:
-                    <input type="number" id="daysOff" value="7" min="0">
-                </label>
-            </div>
-        </div>
+    <div id="rightMenu" class="right-menu">
         <div class="settings-block">
-            <label>Дата начала:
-                <input type="date" id="startDate">
-            </label>
-            <label>Время напоминания:
-                <input type="time" id="notifyTime" value="00:00">
-            </label>
-            <button id="enableNotifications">Включить напоминания</button>
+            <div class="horizontal">
+                <label>Приём: <input type="number" id="daysOn" value="21"></label>
+                <label>Пауза: <input type="number" id="daysOff" value="7"></label>
+            </div>
+            <label>Дата начала: <input type="date" id="startDate"></label>
         </div>
     </div>
 
@@ -58,16 +47,18 @@
         <section class="calendar-container">
             <div class="calendar-controls">
                 <button id="prevMonth" class="nav-btn">‹</button>
-                <button id="todayBtn">Сегодня</button>
+                <h2 id="monthTitle" class="month-title"></h2>
                 <button id="nextMonth" class="nav-btn">›</button>
             </div>
-            <h2 id="monthTitleTop" class="month-title"></h2>
-            <div class="calendar" id="calendarTop"></div>
-            <h2 id="monthTitleBottom" class="month-title"></h2>
-            <div class="calendar" id="calendarBottom"></div>
+            <div id="nextPackInfo" class="next-pack-info"></div>
+            <!--<div id="blisterContainer" class="blister-container">
+                <div class="blister-title">Текущий блистер</div>
+                <div class="blister-grid" id="blisterGrid"></div>
+            </div>-->
+            <div class="calendar" id="calendar"></div>
+            <button id="todayBtn">Сегодня</button>
         </section>
     </main>
-
 </body>
 
 </html>

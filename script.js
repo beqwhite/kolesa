@@ -1,32 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
-  const calendarTop = document.getElementById('calendarTop');
-  const calendarBottom = document.getElementById('calendarBottom');
-  const monthTitleTop = document.getElementById('monthTitleTop');
-  const monthTitleBottom = document.getElementById('monthTitleBottom');
+  // --- ЭЛЕМЕНТЫ ИНТЕРФЕЙСА ---
+  const calendarEl = document.getElementById('calendar');
+  const monthTitleEl = document.getElementById('monthTitle');
   const daysLeftEl = document.getElementById('daysLeft');
-  const mainContent = document.getElementById('mainContent');
+  const overlay = document.getElementById('overlay');
 
   const leftBtn = document.getElementById('leftBtn');
   const rightBtn = document.getElementById('rightBtn');
   const leftMenu = document.getElementById('leftMenu');
   const rightMenu = document.getElementById('rightMenu');
-  const resetMarksBtn = document.getElementById('resetMarksBtn');
-  const resetCourseBtn = document.getElementById('resetCourseBtn');
 
   const daysOnInput = document.getElementById('daysOn');
   const daysOffInput = document.getElementById('daysOff');
   const startDateInput = document.getElementById('startDate');
-  const notifyTimeInput = document.getElementById('notifyTime');
 
   const prevMonthBtn = document.getElementById('prevMonth');
   const nextMonthBtn = document.getElementById('nextMonth');
   const todayBtn = document.getElementById('todayBtn');
 
+  // --- СОСТОЯНИЕ ---
   const today = new Date();
   let currentYear = today.getFullYear();
   let currentMonth = today.getMonth();
 
-  // Настройки и отмеченные дни
   let settings = JSON.parse(localStorage.getItem('settings')) || {
     daysOn: 21,
     daysOff: 7,
@@ -34,161 +30,255 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   let markedDays = JSON.parse(localStorage.getItem('markedDays')) || {};
 
+  // Инициализация значений
   daysOnInput.value = settings.daysOn;
   daysOffInput.value = settings.daysOff;
   if (settings.startDate) startDateInput.value = settings.startDate;
-  notifyTimeInput.value = localStorage.getItem('notifyTime') || '00:00';
 
-  // --- Меню ---
+  // --- ФУНКЦИИ ---
+  function hapticFeedback(type) {
+    if (!window.navigator || !window.navigator.vibrate) return;
+
+    if (type === 'success') {
+      window.navigator.vibrate(10); // Короткий мягкий клик
+    } else if (type === 'warning') {
+      window.navigator.vibrate([15, 30, 15]); // Двойной прерывистый (для удаления)
+    } else if (type === 'heavy') {
+      window.navigator.vibrate(50); // Уверенная вибрация (для меню/сброса)
+    }
+  }
+
   function toggleMenu(menu) {
-    const isHidden = menu.classList.toggle('hidden');
-    mainContent.style.display = isHidden ? 'block' : 'none';
+    menu.classList.toggle('active');
+    overlay.classList.toggle('active');
   }
 
   leftBtn.onclick = () => toggleMenu(leftMenu);
   rightBtn.onclick = () => toggleMenu(rightMenu);
 
-  resetMarksBtn.onclick = () => {
-    if (confirm('⚠️ Вы уверены, что хотите сбросить все отметки?')) {
+  overlay.onclick = () => {
+    leftMenu.classList.remove('active');
+    rightMenu.classList.remove('active');
+    overlay.classList.remove('active');
+  };
+
+  // --- УПРАВЛЕНИЕ ДАННЫМИ ---
+  document.getElementById('leftBtn').onclick = () => {
+    hapticFeedback('heavy');
+    toggleMenu(leftMenu);
+  };
+  document.getElementById('rightBtn').onclick = () => {
+    hapticFeedback('heavy');
+    toggleMenu(rightMenu);
+  };
+
+  document.getElementById('resetMarksBtn').onclick = () => {
+    hapticFeedback('heavy');
+    if (confirm('⚠️ Сбросить только отметки?')) {
       markedDays = {};
       localStorage.removeItem('markedDays');
-      renderCalendars();
-      updateDaysLeft();
+      refresh();
     }
   };
 
-  resetCourseBtn.onclick = () => {
-    if (confirm('⚠️ Вы уверены, что хотите сбросить весь курс?')) {
-      markedDays = {};
-      settings.startDate = null;
-      localStorage.removeItem('markedDays');
-      localStorage.setItem('settings', JSON.stringify(settings));
-      renderCalendars();
-      updateDaysLeft();
+  document.getElementById('resetCourseBtn').onclick = () => {
+    if (confirm('⚠️ Сбросить весь курс?')) {
+      localStorage.clear();
+      location.reload();
     }
   };
 
-  // --- Сохранение настроек ---
+  document.getElementById('exportBtn').onclick = async () => {
+    const data = btoa(JSON.stringify({ settings, markedDays }));
+    if (navigator.share) {
+      await navigator.share({
+        title: 'Бэкап Календаря',
+        text: data,
+      });
+    } else {
+      // запасной вариант с буфером
+      navigator.clipboard.writeText(data);
+      alert('Скопировано!');
+    }
+  };
+
+  document.getElementById('importBtn').onclick = () => {
+    const code = prompt('Вставь код бекапа сюда:');
+    if (code) {
+      try {
+        const decoded = JSON.parse(atob(code));
+        localStorage.setItem('settings', JSON.stringify(decoded.settings));
+        localStorage.setItem('markedDays', JSON.stringify(decoded.markedDays));
+        location.reload();
+      } catch (e) {
+        alert('❌ Ошибка кода');
+      }
+    }
+  };
+
   function saveSettings() {
     settings.daysOn = Number(daysOnInput.value);
     settings.daysOff = Number(daysOffInput.value);
     settings.startDate = startDateInput.value;
     localStorage.setItem('settings', JSON.stringify(settings));
-    localStorage.setItem('notifyTime', notifyTimeInput.value);
-    updateDaysLeft();
-    scheduleNotification();
-    renderCalendars();
+    refresh();
   }
 
-  [daysOnInput, daysOffInput, startDateInput, notifyTimeInput].forEach((i) =>
+  [daysOnInput, daysOffInput, startDateInput].forEach((i) =>
     i.addEventListener('change', saveSettings),
   );
 
-  // --- Индикатор дней ---
-  function updateDaysLeft() {
+  // --- ЛОГИКА БЛИСТЕРА И СЛЕДУЮЩЕЙ ПАЧКИ ---
+  function updateBlisterAndNextPack() {
+    const nextPackEl = document.getElementById('nextPackInfo');
+    const blisterCont = document.getElementById('blisterContainer');
+
     if (!settings.startDate) {
-      daysLeftEl.textContent = '';
-      daysLeftEl.style.color = '#fff';
+      nextPackEl.style.display = 'none';
+      if (blisterCont) blisterCont.style.display = 'none';
       return;
     }
+
     const start = new Date(settings.startDate);
     start.setHours(0, 0, 0, 0);
     const now = new Date();
     now.setHours(0, 0, 0, 0);
-    const diff = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+
+    const diff = Math.floor((now - start) / 86400000);
+    const cycle = settings.daysOn + settings.daysOff;
+
+    if (diff >= 0) {
+      const currentCycleNum = Math.floor(diff / cycle);
+      const nextPackDate = new Date(start);
+      nextPackDate.setDate(nextPackDate.getDate() + (currentCycleNum + 1) * cycle);
+
+      const dateStr = nextPackDate.toLocaleDateString('ru', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+      });
+      nextPackEl.innerHTML = `Следующая пачка: <b>${dateStr}</b>`;
+      nextPackEl.style.display = 'block';
+
+      // Часть с блистером просто игнорируем, она не сработает, так как контейнер скрыт в HTML
+      if (blisterCont) blisterCont.style.display = 'none';
+    } else {
+      nextPackEl.style.display = 'none';
+      if (blisterCont) blisterCont.style.display = 'none';
+    }
+  }
+
+  function updateDaysLeft() {
+    if (!settings.startDate) {
+      daysLeftEl.textContent = 'Укажите дату старта';
+      daysLeftEl.style.color = '#8e8e93';
+      return;
+    }
+    const start = new Date(settings.startDate);
+    start.setHours(0, 0, 0, 0);
+    const diff = Math.floor((today - start) / 86400000);
+
+    if (diff < 0) {
+      daysLeftEl.textContent = 'Курс еще не начался';
+      return;
+    }
+
     const totalCycle = settings.daysOn + settings.daysOff;
     const cycleDay = diff % totalCycle;
 
     if (cycleDay < settings.daysOn) {
-      const remaining = settings.daysOn - cycleDay;
-      daysLeftEl.textContent = `Осталось дней приёма: ${remaining}`;
+      daysLeftEl.textContent = `Приём: ещё ${settings.daysOn - cycleDay} дн.`;
       daysLeftEl.style.color = '#4cd964';
     } else {
-      const remainingBreak = totalCycle - cycleDay;
-      daysLeftEl.textContent = `Осталось дней перерыва: ${remainingBreak}`;
-      daysLeftEl.style.color = 'rgba(255,50,50,0.8)';
+      daysLeftEl.textContent = `Пауза: ещё ${totalCycle - cycleDay} дн.`;
+      daysLeftEl.style.color = '#ff453a';
     }
   }
 
-  // --- Цикл приёма ---
   function isTakeDay(date) {
     if (!settings.startDate) return null;
     const start = new Date(settings.startDate);
     start.setHours(0, 0, 0, 0);
-    const target = new Date(date);
-    target.setHours(0, 0, 0, 0);
-    const diff = Math.floor((target - start) / (1000 * 60 * 60 * 24));
+    const diff = Math.floor((new Date(date).setHours(0, 0, 0, 0) - start) / 86400000);
     if (diff < 0) return null;
     return diff % (settings.daysOn + settings.daysOff) < settings.daysOn ? 'take' : 'break';
   }
 
-  // --- Рендер календарей ---
-  function renderCalendar(year, month, calendarEl, monthTitleEl) {
+  function renderCalendar(year, month) {
     calendarEl.innerHTML = '';
+    const weekDays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    weekDays.forEach((d) => {
+      const h = document.createElement('div');
+      h.className = 'weekday-header';
+      h.textContent = d;
+      calendarEl.appendChild(h);
+    });
+
     const first = new Date(year, month, 1);
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const firstDayWeek = first.getDay() === 0 ? 6 : first.getDay() - 1;
+    const last = new Date(year, month + 1, 0).getDate();
+    let startDay = first.getDay();
+    startDay = startDay === 0 ? 6 : startDay - 1;
+
     monthTitleEl.textContent = first.toLocaleString('ru', { month: 'long', year: 'numeric' });
 
-    for (let i = 0; i < firstDayWeek; i++) {
+    for (let i = 0; i < startDay; i++) {
       const empty = document.createElement('div');
       empty.className = 'day inactive';
       calendarEl.appendChild(empty);
     }
 
-    for (let d = 1; d <= daysInMonth; d++) {
+    for (let d = 1; d <= last; d++) {
       const dayEl = document.createElement('div');
       dayEl.className = 'day';
       const fullDate = new Date(year, month, d);
       const key = fullDate.toISOString().split('T')[0];
+
       if (fullDate.toDateString() === today.toDateString()) dayEl.classList.add('today');
 
       const cycleType = isTakeDay(fullDate);
       if (!markedDays[key]) {
         if (cycleType === 'take') dayEl.classList.add('take-day');
         if (cycleType === 'break') dayEl.classList.add('break-day');
-      }
-      if (markedDays[key] === 'take') {
-        dayEl.classList.remove('take-day', 'break-day');
-        dayEl.classList.add('active');
-      }
-      if (markedDays[key] === 'break') {
-        dayEl.classList.remove('take-day', 'break-day');
-        dayEl.classList.add('break-marked');
+      } else {
+        dayEl.classList.add(markedDays[key] === 'take' ? 'active' : 'break-marked');
       }
 
       dayEl.textContent = d;
-      dayEl.title = cycleType === 'take' ? 'День приёма' : 'День перерыва';
       dayEl.onclick = () => {
         if (!markedDays[key]) {
-          markedDays[key] = cycleType;
-          if (cycleType === 'break') alert('⚠️ День перерыва!');
+          // СТАВИМ ОТМЕТКУ
+          hapticFeedback('success'); // Мягкий клик
+          markedDays[key] = cycleType || 'take';
+          localStorage.setItem('markedDays', JSON.stringify(markedDays));
+          refresh();
         } else {
-          if (confirm('Удалить отметку с этого дня?')) delete markedDays[key];
+          // УДАЛЯЕМ ОТМЕТКУ
+          hapticFeedback('warning'); // Ощутимый двойной отклик
+          dayEl.classList.add('shake');
+          setTimeout(() => {
+            delete markedDays[key];
+            localStorage.setItem('markedDays', JSON.stringify(markedDays));
+            refresh();
+          }, 200);
         }
-        localStorage.setItem('markedDays', JSON.stringify(markedDays));
-        updateDaysLeft();
-        renderCalendars();
       };
       calendarEl.appendChild(dayEl);
     }
   }
 
-  function renderCalendars() {
-    renderCalendar(currentYear, currentMonth, calendarTop, monthTitleTop);
-    const nextMonth = currentMonth + 1 > 11 ? 0 : currentMonth + 1;
-    const nextYear = currentMonth + 1 > 11 ? currentYear + 1 : currentYear;
-    renderCalendar(nextYear, nextMonth, calendarBottom, monthTitleBottom);
+  function refresh() {
+    updateDaysLeft();
+    renderCalendar(currentYear, currentMonth);
+    updateBlisterAndNextPack(); // ТЕПЕРЬ ОНО ВЫЗЫВАЕТСЯ ЗДЕСЬ
   }
 
-  // --- Кнопки управления ---
   prevMonthBtn.onclick = () => {
     currentMonth--;
     if (currentMonth < 0) {
       currentMonth = 11;
       currentYear--;
     }
-    renderCalendars();
+    refresh();
   };
   nextMonthBtn.onclick = () => {
     currentMonth++;
@@ -196,55 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
       currentMonth = 0;
       currentYear++;
     }
-    renderCalendars();
+    refresh();
   };
   todayBtn.onclick = () => {
     currentYear = today.getFullYear();
     currentMonth = today.getMonth();
-    renderCalendars();
+    refresh();
   };
 
-  // --- Уведомления ---
-  function scheduleNotification() {
-    if (!settings.startDate) return;
-    const lastNotified = localStorage.getItem('lastNotifyDate') || '';
-    const nowUTC = new Date();
-    const nowMSK = new Date(nowUTC.getTime() + 3 * 60 * 60 * 1000);
-    const [h, m] = notifyTimeInput.value.split(':').map(Number);
-    const nextPill = new Date(nowMSK);
-    nextPill.setHours(h, m, 0, 0);
-    if (nowMSK > nextPill) nextPill.setDate(nextPill.getDate() + 1);
-    const diffMs = nextPill - nowMSK;
-    const diffH = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffM = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (nowMSK.getHours() >= 18) {
-      daysLeftEl.textContent = `До следующей таблетки: ${diffH}ч ${diffM}м`;
-    } else {
-      updateDaysLeft();
-    }
-
-    if (
-      nowMSK.getHours() === h &&
-      nowMSK.getMinutes() === m &&
-      lastNotified !== nowMSK.toISOString().split('T')[0]
-    ) {
-      new Notification('💊 Пора принять таблетку!');
-      localStorage.setItem('lastNotifyDate', nowMSK.toISOString().split('T')[0]);
-    }
-  }
-
-  document.getElementById('enableNotifications').onclick = async () => {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      alert('Разрешите уведомления');
-      return;
-    }
-    localStorage.setItem('notifyTime', notifyTimeInput.value);
-    alert('Напоминания включены. Работают пока сайт открыт.');
-  };
-
-  renderCalendars();
-  scheduleNotification();
-  setInterval(scheduleNotification, 60000);
+  refresh(); // Запуск при старте
 });
